@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}<a href="/">← Back to archive</a><div class="toolbar"><h1>{{row.subject}}</h1><a class="button" href="{{url_for('download',mid=row.id)}}">Download original .eml</a></div><p><strong>From:</strong> {{row.sender}}</p><p><strong>To / Cc / Bcc:</strong> {{row.recipients}}</p><p class="muted">{{row.received|date}} · SHA-256 verified on retrieval{% if html %} · Formatted preview runs no scripts and blocks remote/tracking images{% endif %}</p>
+{% if html %}<iframe title="Email preview" sandbox style="width:100%;height:72vh;border:1px solid #e1e6ee;border-radius:12px;background:white" srcdoc="{{html}}"></iframe>
+<details style="margin-top:14px"><summary class="muted">View as plain text</summary><div class="mailbody" style="margin-top:10px">{{body}}</div></details>
+{% else %}<div class="mailbody">{{body}}</div>{% endif %}
+{% if attachments %}<h3>Attachments</h3>{% for index,name in attachments %}<p><a href="{{url_for('attachment',mid=row.id,part_id=index)}}">{{name}} ↓</a></p>{% endfor %}{% endif %}{% endblock %}

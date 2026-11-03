@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% block content %}
+<a href="/">← Back to archive</a>
+<h1>Backup settings</h1>
+<p class="muted">Choose which of your emails get backed up. Backup is read-only — it never changes or deletes your Gmail. (Only an administrator can remove mail from Gmail.)</p>
+{% if saved == 'synced' %}<div class="card" style="border-color:#126f69;background:#eefaf6"><strong>Saved — a backup run just started.</strong> Refresh the archive in a bit.</div>
+{% elif saved %}<div class="card" style="border-color:#126f69;background:#eefaf6"><strong>Rules saved.</strong> They apply to your next backup.</div>{% endif %}
+{% if error %}<div class="card" style="border-color:#b00020;background:#fdECef"><strong>{{error}}</strong></div>{% endif %}
+
+<form method="post" class="card">
+<input type="hidden" name="csrf" value="{{session.csrf}}">
+<p class="muted">Leave everything blank to back up all mail. Senders match the From address (case-insensitive, substrings); labels are Gmail label IDs; comma-separate multiple values.</p>
+<div class="filters" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <label class="muted">Only mail before (YYYY-MM-DD)<input type="date" name="before" value="{{form.get('before','')}}"></label>
+  <label class="muted">…or older than N months<input type="number" min="1" name="months" value="{{form.get('months','')}}" placeholder="e.g. 12"></label>
+  <label class="muted">Only from senders<input name="senders_include" value="{{form.get('senders_include','')}}" placeholder="newsletter@, noreply@"></label>
+  <label class="muted">Never back up from<input name="senders_exclude" value="{{form.get('senders_exclude','')}}"></label>
+  <label class="muted">Only these labels<input name="labels_include" value="{{form.get('labels_include','')}}" placeholder="CATEGORY_PROMOTIONS"></label>
+  <label class="muted">Exclude these labels<input name="labels_exclude" value="{{form.get('labels_exclude','')}}"></label>
+  <label class="muted">Only larger than (MB)<input type="number" step="0.1" min="0" name="min_size_mb" value="{{form.get('min_size_mb','')}}"></label>
+</div>
+<p class="muted">Current backup query: <code>{{query}}</code></p>
+<p><button name="action" value="save" style="background:#555">Save rules</button> <button name="action" value="sync">Save &amp; back up now</button></p>
+</form>
+{% if run %}<p class="muted">Last backup: {{run.finished|date if run.finished else 'in progress…'}}{% if run.error %} · needs attention: {{run.error}}{% endif %}</p>{% endif %}
+{% endblock %}

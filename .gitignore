@@ -1,0 +1,12 @@
+.env
+*.sqlite*
+*.worker.lock
+__pycache__/
+.venv/
+# Never commit credentials or local data
+secrets/
+data/
+*service-account*.json
+*.pem
+credentials.json
+client_secret*.json

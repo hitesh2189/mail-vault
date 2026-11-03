@@ -1,0 +1,49 @@
+{% extends 'base.html' %}{% block content %}
+<a href="/admin">← Archive operations</a>
+<h1>Cleanup — {{mailbox}}</h1>
+<p class="muted">Cleanup moves matching messages to <strong>Gmail Trash</strong> (recoverable ~30 days; this tool never empties Trash). Only messages already archived and checksum-verified in S3 are eligible. Preview changes nothing.</p>
+{% if not cleanup_enabled %}<div class="card" style="border-color:#c58a00;background:#fff8e6"><strong>Live trashing is OFF</strong> (<code>ENABLE_CLEANUP=false</code>). Preview works; the Trash action is disabled until an operator enables it.</div>{% endif %}
+{% if error %}<div class="card" style="border-color:#b00020;background:#fdECef"><strong>{{error}}</strong></div>{% endif %}
+{% if result %}<div class="card" style="border-color:#126f69;background:#eefaf6"><strong>Trashed {{result.trashed}} message(s)</strong> of {{result.candidates}} candidate(s). They are now in {{mailbox}}'s Gmail Trash; the S3 archive copies are retained.</div>{% endif %}
+
+<form method="post" class="card">
+<input type="hidden" name="csrf" value="{{session.csrf}}">
+<h3>Rules</h3>
+<p class="muted">Age gate is required (defaults to older than one year). Sender/label/size further narrow the set. Sender matches are case-insensitive substrings of the From header; labels are Gmail label IDs (e.g. <code>CATEGORY_PROMOTIONS</code>); multiple values comma-separated.</p>
+<div class="filters" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <label class="muted">Before date (YYYY-MM-DD)<input type="date" name="before" value="{{form.get('before','')}}"></label>
+  <label class="muted">…or older than N months<input type="number" min="1" name="months" value="{{form.get('months','')}}" placeholder="12"></label>
+  <label class="muted">Senders include<input name="senders_include" value="{{form.get('senders_include','')}}" placeholder="newsletter@, noreply@"></label>
+  <label class="muted">Senders exclude (never trash)<input name="senders_exclude" value="{{form.get('senders_exclude','')}}" placeholder="legal@, hr@"></label>
+  <label class="muted">Labels include<input name="labels_include" value="{{form.get('labels_include','')}}" placeholder="CATEGORY_PROMOTIONS"></label>
+  <label class="muted">Labels exclude<input name="labels_exclude" value="{{form.get('labels_exclude','')}}" placeholder="STARRED, IMPORTANT"></label>
+  <label class="muted">Min size (MB)<input type="number" step="0.1" min="0" name="min_size_mb" value="{{form.get('min_size_mb','')}}" placeholder="5"></label>
+</div>
+{% if query %}<p class="muted">Gmail query for targeted backup: <code>{{query}}</code></p>{% endif %}
+<p><button name="action" value="save" style="background:#555">Save rules</button> <button name="action" value="preview">Preview candidates</button> <button name="action" value="sync" style="background:#284254">Run targeted backup (sync)</button></p>
+<p class="muted">Order of operations: set rules → <strong>Run targeted backup</strong> (archives only matching mail to S3) → <strong>Preview</strong> to confirm what's captured → <strong>Move to Trash</strong> to delete those from Gmail.</p>
+</form>
+
+{% if preview is not none %}
+<div class="card"><h3>Preview</h3>
+<p><strong>{{'{:,}'.format(preview.count)}}</strong> messages match · <strong>{{'%.1f'|format(preview.bytes/1048576)}} MB</strong> · cutoff {{preview.cutoff|date}} (messages received before this are eligible).</p>
+{% if preview.count %}
+<div class="table"><table><thead><tr><th>Received</th><th>From</th><th>Subject</th><th>Size</th></tr></thead><tbody>
+{% for r in preview.sample %}<tr><td style="white-space:nowrap">{{r.received|date}}</td><td>{{r.sender}}</td><td>{{r.subject}}</td><td>{{'%.0f'|format(r.size/1024)}} KB</td></tr>{% endfor %}
+</tbody></table></div>
+{% if preview.count > preview.sample|length %}<p class="muted">Showing first {{preview.sample|length}} of {{'{:,}'.format(preview.count)}}.</p>{% endif %}
+
+<h3 style="margin-top:28px">Move to Trash</h3>
+<form method="post">
+<input type="hidden" name="csrf" value="{{session.csrf}}">
+{% for k in ['before','months','senders_include','senders_exclude','labels_include','labels_exclude','min_size_mb'] %}<input type="hidden" name="{{k}}" value="{{form.get(k,'')}}">{% endfor %}
+<p class="muted">This moves live mail to Trash in batches. Batch size (max 100 per click):</p>
+<label class="muted">Batch limit <input type="number" name="limit" min="1" max="100" value="25"></label>
+<p class="muted">Type <code>TRASH {{mailbox}}</code> to confirm:</p>
+<input name="confirm" autocomplete="off" placeholder="TRASH {{mailbox}}" style="min-width:320px">
+<p><button name="action" value="apply" {% if not cleanup_enabled %}disabled title="ENABLE_CLEANUP is false"{% endif %} style="background:#b00020">Move batch to Trash</button></p>
+</form>
+{% else %}<p class="muted">Nothing matches these rules.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

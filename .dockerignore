@@ -1,0 +1,7 @@
+.env
+*.sqlite*
+*.worker.lock
+**/__pycache__
+.venv
+**/*service-account*.json
+.git
